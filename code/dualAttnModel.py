@@ -1,8 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.parallel
+
 from GlobalAttention import GlobalAttentionGeneral as TextAttentionModule
 from GlobalAttention import conv1x1
+from model import GET_IMAGE_G
+from model import upBlock
+
+from miscc.config import cfg
+
 
 class ChannelAttentionModule(nn.Module):
 	def __init__(self, input_size):
@@ -61,25 +67,86 @@ class SpatialAttentionModule(nn.Module):
 
 
 class VisualAttentionModule(nn.Module):
-	def __init__(self):
-		pass
+	def __init__(self, input_size, input_channels):
+		super(VisualAttentionModule, self).__init__()
+		self.channel_attention_module = ChannelAttentionModule(input_size)
+		self.spatial_attention_module = SpatialAttentionModule(input_size, input_channels)
 
 	#hidden_stage_result is h in the paper
 	def forward(self, hidden_stage_result):
-		pass
-
-
-class AttentionEmbeddingModule(nn.Module):
-	def __init__(self):
-		pass
-
-	def forward(self, visual_attention_result, textual_attention_result):
-		pass
+		out_1 = self.channel_attention_module(hidden_stage_result)
+		out_2 = self.spatial_attention_module(out_1)
+		return out_2
 
 
 class DualAttentionModule(nn.Module):
+	def __init__(self, hidden_stage_result_size, hidden_state_result_channels, word_features_size):
+		self.textual_attention_module = TextAttentionModule(hidden_state_result_channels, word_features_size)
+		self.visual_attention_module = VisualAttentionModule(hidden_stage_result_size, hidden_state_result_channels)
+
+	def forward(self, hidden_stage_result, word_features, mask):
+		self.textual_attention_module.applyMask(mask)
+		results_t = self.textual_attention_module(hidden_stage_result, word_features)
+		results_v = self.visual_attention_module(hidden_stage_result)
+		out_1 = hidden_stage_result + results_t
+		out_2 = hidden_stage_result + results_v
+		#concat along which dim?
+		out = torch.cat((out_1, out_2), dim = 1)
+		return out
+
+
+class DualAttn_INIT_STAGE_G(nn.Module):
+    def __init__(self, ngf, ncf):
+        super(INIT_STAGE_G, self).__init__()
+        self.gf_dim = ngf
+        self.in_dim = cfg.GAN.Z_DIM + ncf  # cfg.TEXT.EMBEDDING_DIM
+        nz, ngf = self.in_dim, self.gf_dim
+
+        self.fc = nn.Sequential(
+            nn.Linear(nz, ngf * 4 * 4 * 2, bias=False),
+            nn.BatchNorm1d(ngf * 4 * 4 * 2),
+			#changed from GLU to ReLU
+            nn.ReLU())
+
+        self.upsample1 = upBlock(ngf, ngf // 2)
+        self.upsample2 = upBlock(ngf // 2, ngf // 4)
+        self.upsample3 = upBlock(ngf // 4, ngf // 8)
+        self.upsample4 = upBlock(ngf // 8, ngf // 16)
+
+    def forward(self, z_code, c_code):
+        """
+        :param z_code: batch x cfg.GAN.Z_DIM
+        :param c_code: batch x cfg.TEXT.EMBEDDING_DIM
+        :return: batch x ngf/16 x 64 x 64
+        """
+        c_z_code = torch.cat((c_code, z_code), 1)
+        # state size ngf x 4 x 4
+        out_code = self.fc(c_z_code)
+        out_code = out_code.view(-1, self.gf_dim, 4, 4)
+        # state size ngf/3 x 8 x 8
+        out_code = self.upsample1(out_code)
+        # state size ngf/4 x 16 x 16
+        out_code = self.upsample2(out_code)
+        # state size ngf/8 x 32 x 32
+        out_code32 = self.upsample3(out_code)
+        # state size ngf/16 x 64 x 64
+        out_code64 = self.upsample4(out_code32)
+
+        return out_code64
+
+
+class DualAttn_NEXT_STAGE_G(nn.Module):
+	#image features size, embedding size, condition size
+	def __init__(self, hidden_state_result_channels, word_features_size, sentence_features_size):
+		pass
+
+	def forward(self):
+		pass
+
+
+class DualAttn_G_NET(nn.Module):
 	def __init__(self):
 		pass
 
-	def forward(self, hidden_stage_result, word_features):
+	def forward(self):
 		pass
