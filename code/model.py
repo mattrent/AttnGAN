@@ -427,6 +427,7 @@ class G_NET(nn.Module):
 
         if cfg.TREE.BRANCH_NUM > 0:
             h_code1 = self.h_net1(z_code, c_code)
+            print("H_CODE1 -> ", h_code1.shape)
             fake_img1 = self.img_net1(h_code1)
             fake_imgs.append(fake_img1)
         if cfg.TREE.BRANCH_NUM > 1:

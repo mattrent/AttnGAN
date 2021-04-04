@@ -16,6 +16,7 @@ from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
 from datasets import prepare_data
 from model import RNN_ENCODER, CNN_ENCODER
+from dualAttnModel import DualAttn_G_NET
 
 from miscc.losses import words_loss
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
@@ -84,6 +85,15 @@ class condGANTrainer(object):
             # TODO: elif cfg.TREE.BRANCH_NUM > 3:
             netG = G_DCGAN()
             netsD = [D_NET(b_jcu=False)]
+        elif cfg.GAN.DUAL_ATTN:
+            from model import D_NET64, D_NET128, D_NET256
+            netG = DualAttn_G_NET()
+            if cfg.TREE.BRANCH_NUM > 0:
+                netsD.append(D_NET64())
+            if cfg.TREE.BRANCH_NUM > 1:
+                netsD.append(D_NET128())
+            if cfg.TREE.BRANCH_NUM > 2:
+                netsD.append(D_NET256())
         else:
             from model import D_NET64, D_NET128, D_NET256
             netG = G_NET()

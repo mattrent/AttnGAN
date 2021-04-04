@@ -99,6 +99,8 @@ class GlobalAttentionGeneral(nn.Module):
         # Get attention
         # (batch x queryL x idf)(batch x idf x sourceL)
         # -->batch x queryL x sourceL
+        print("sourceT SIZE: ->", sourceT.shape)
+        print("targetT SIZE: ->", targetT.shape)
         attn = torch.bmm(targetT, sourceT)
         # --> batch*queryL x sourceL
         attn = attn.view(batch_size*queryL, sourceL)
