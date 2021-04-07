@@ -364,6 +364,8 @@ class condGANTrainer(object):
             # Build and load the generator
             if cfg.GAN.B_DCGAN:
                 netG = G_DCGAN()
+            elif cfg.GAN.DUAL_ATTN:
+                netG = DualAttn_G_NET()
             else:
                 netG = G_NET()
             netG.apply(weights_init)
