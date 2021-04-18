@@ -16,3 +16,7 @@ Since the original code depends on Python 2.7 and an old (0.4.0) version of Pyto
 ## Training and evaluation
 
 The training and evaluation structure was kept from the original code, and the instructions can be found in [README_old.md](README_old.md)
+
+Inception Score and Fréchet Inception Distance were calculated respectively using these implementations:
+- IS: https://github.com/hanzhanggit/StackGAN-inception-model
+- FID: https://github.com/bioinf-jku/TTUR
